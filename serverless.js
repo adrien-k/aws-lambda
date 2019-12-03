@@ -61,23 +61,24 @@ class AwsLambda extends Component {
       credentials: this.context.credentials.aws
     })
 
-    const awsIamRole = await this.load('@serverless/aws-iam-role')
-
-    // If no role exists, create a default role
-    let outputsAwsIamRole
-    if (!config.role) {
-      this.context.debug(`No role provided for lambda ${config.name}.`)
-
-      outputsAwsIamRole = await awsIamRole({
-        service: 'lambda.amazonaws.com',
-        policy: {
-          arn: 'arn:aws:iam::aws:policy/AdministratorAccess'
-        },
-        region: config.region
-      })
-      config.role = { arn: outputsAwsIamRole.arn }
+    if (config.roleArn) {
+      config.role = { arn: config.roleArn }
     } else {
-      outputsAwsIamRole = await awsIamRole(config.role)
+      let { role } = config
+      if (!config.role) {
+        this.context.debug(`No role provided for lambda ${config.name}.`)
+        role = { // If no role exists, create a default role
+          service: 'lambda.amazonaws.com',
+          policy: {
+            arn: 'arn:aws:iam::aws:policy/AdministratorAccess'
+          },
+          region: config.region
+        }
+      }
+
+      const awsIamRole = await this.load('@serverless/aws-iam-role')
+      const outputsAwsIamRole = await awsIamRole(role)
+
       config.role = { arn: outputsAwsIamRole.arn }
     }
 
